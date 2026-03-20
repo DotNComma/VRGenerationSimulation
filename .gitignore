@@ -1,0 +1,36 @@
+# --- Unity Folders to Ignore ---
+/[Ll]ibrary/
+/[Tt]emp/
+/[Oo]bj/
+/[Bb]uild/
+/[Bb]uilds/
+/[Ll]ogs/
+/[Uu]ser[Ss]ettings/
+/[MemoryCaptures]/
+
+# --- Meta/Quest Specific ---
+.utmp/
+*.apk
+*.unitypackage
+
+# --- OS Specific ---
+.DS_Store
+Thumbs.db
+
+# --- Visual Studio / IDE ---
+*.csproj
+*.sln
+*.user
+*.suo
+*.userprefs
+*.pidb
+*.ide
+.vs/
+
+# --- IMPORTANT: Ensure .meta files are NEVER ignored ---
+!*.meta
+
+# --- Protect your Core Work ---
+!/[Aa]ssets/
+!/[Pp]roject[Ss]ettings/
+!/[Pp]ackages/
