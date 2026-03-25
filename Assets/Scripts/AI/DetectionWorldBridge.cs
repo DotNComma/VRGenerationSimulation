@@ -31,9 +31,16 @@ public class DetectionWorldBridge : MonoBehaviour
             }
 
             Ray ray = mainCam.ViewportPointToRay(new Vector3(screenPosition.x, screenPosition.y, 0));
-            if (Physics.Raycast(ray, out RaycastHit hit, 10f))
+
+            var room = MRUK.Instance.GetCurrentRoom();
+            if (room == null)
             {
-                Debug.Log($"<color=green>[Bridge] HIT MESH at {hit.point}</color>");
+                Debug.LogWarning("[Bridge] No MRUK Room found. Waiting for Scene Scan...");
+                return;
+            }
+
+            if (room.Raycast(ray, 10f, out RaycastHit hit))
+            {
                 Instantiate(catPrefab, hit.point, Quaternion.identity);
                 hasSpawned = true;
             }

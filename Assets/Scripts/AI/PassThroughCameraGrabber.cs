@@ -1,81 +1,84 @@
-using UnityEngine;
-using Meta.XR.MRUtilityKit;
 using Meta.XR;
+using Meta.XR.MRUtilityKit;
+using System;
 using System.Collections;
+using UnityEngine;
 
 public class PassThroughCameraGrabber : MonoBehaviour
 {
     private PassthroughCameraAccess cameraAccess;
-    private WebCamTexture questCam;
-    private bool isReady = false;
     private float lastDetectionTime;
+    private Texture2D outputTexture;
+    private bool isReady = false;
 
     public float detectionInterval = 0.5f;
     public AIVisionManager visionManager;
 
-    // Start is called before the first frame update
     void Start()
     {
-        if (!UnityEngine.Android.Permission.HasUserAuthorizedPermission(UnityEngine.Android.Permission.Camera))
+        cameraAccess = GetComponent<PassthroughCameraAccess>();
+        if (cameraAccess == null)
         {
-            UnityEngine.Android.Permission.RequestUserPermission(UnityEngine.Android.Permission.Camera);
+            Debug.LogError("[Grabber] Missing PassthroughCameraAccess component on this GameObject!");
+            return;
         }
 
-        StartCoroutine(InitializeCamera());
+        StartCoroutine(InitializeCameraRoutine());
     }
 
-    private IEnumerator InitializeCamera()
+    private IEnumerator InitializeCameraRoutine()
     {
-        Debug.Log("<color=white>[Grabber] Waiting for OVRManager to initialize...</color>");
-
-        while (!OVRManager.IsInsightPassthroughInitialized())
+        while (OVRManager.instance == null || !OVRManager.IsInsightPassthroughInitialized())
         {
             yield return new WaitForSeconds(0.5f);
         }
 
-        if (WebCamTexture.devices.Length > 0)
+        while (!cameraAccess.IsPlaying)
         {
-            // Usually "0" is the Left RGB camera on Quest 3S
-            questCam = new WebCamTexture(WebCamTexture.devices[0].name, 1280, 960, 30);
-            questCam.Play();
-        }
-        else
-        {
-            Debug.LogError("[Grabber] No Camera Hardware detected by Unity!");
-            yield break;
+            yield return new WaitForSeconds(0.2f);
         }
 
-        // 3. Wait for the texture to actually start producing pixels
-        float timer = 0;
-        while (questCam.width < 100 && timer < 5f)
-        {
-            timer += Time.deltaTime;
-            yield return null;
-        }
-
-        if (questCam.isPlaying)
-        {
-            isReady = true;
-            Debug.Log("<color=green>[Grabber] SUCCESS! WebCamTexture is Playing.</color>");
-        }
-        else
-        {
-            Debug.LogError("[Grabber] WebCamTexture failed to start after 5 seconds.");
-        }
+        isReady = true;
     }
 
-    // Update is called once per frame
     void Update()
     {
-        if (!isReady || questCam == null) return;
+        if (!isReady || cameraAccess == null) return;
 
         if (Time.time > lastDetectionTime + detectionInterval)
         {
-            if (questCam.didUpdateThisFrame)
+            Texture metaTexture = cameraAccess.GetTexture();
+
+            if (metaTexture != null)
             {
-                visionManager.DetectObjects(questCam);
-                lastDetectionTime = Time.time;
+                Texture2D readableTexture = ConvertToTexture2D(metaTexture);
+
+                if (readableTexture != null)
+                {
+                    visionManager.DetectObjects(readableTexture);
+                    lastDetectionTime = Time.time;
+                }
             }
         }
+    }
+
+    private Texture2D ConvertToTexture2D(Texture source)
+    {
+        if (outputTexture == null || outputTexture.width != source.width || outputTexture.height != source.height)
+        {
+            outputTexture = new Texture2D(source.width, source.height, TextureFormat.RGBA32, false);
+        }
+
+        RenderTexture rt = source as RenderTexture;
+        if (rt == null) return null;
+
+        RenderTexture previous = RenderTexture.active;
+        RenderTexture.active = rt;
+        outputTexture.ReadPixels(new Rect(0, 0, rt.width, rt.height), 0, 0);
+        outputTexture.Apply();
+
+        RenderTexture.active = previous;
+
+        return outputTexture;
     }
 }
