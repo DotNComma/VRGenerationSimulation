@@ -989,11 +989,11 @@ PrefabInstance:
         type: 3}
       propertyPath: MeshMaterial
       value: 
-      objectReference: {fileID: 2100000, guid: 599b01c5f1d17436c89b88cc04257314, type: 2}
+      objectReference: {fileID: 2100000, guid: b51db210fe78df745a372851b3db949e, type: 2}
     - target: {fileID: 1412405228187654818, guid: ef536280085de1b40b098f29f9f6d77a,
         type: 3}
       propertyPath: SpawnOnStart
-      value: 1
+      value: 2
       objectReference: {fileID: 0}
     - target: {fileID: 6858649826942774120, guid: ef536280085de1b40b098f29f9f6d77a,
         type: 3}
