@@ -78,48 +78,22 @@ public class Wander : MonoBehaviour
 
     private IEnumerator WanderToNewSpot()
     {
-        bool isFloorTarget = Random.value > 0.3f;
-        LabelFilter filter = isFloorTarget
-            ? new LabelFilter(MRUKAnchor.SceneLabels.FLOOR)
-            : new LabelFilter(MRUKAnchor.SceneLabels.TABLE | MRUKAnchor.SceneLabels.BED | MRUKAnchor.SceneLabels.COUCH);
-
         bool found = currentRoom.GenerateRandomPositionOnSurface(
             MRUK.SurfaceType.FACING_UP,
             0.3f,
-            filter,
+            new LabelFilter(MRUKAnchor.SceneLabels.FLOOR),
             out Vector3 randomPos,
             out _
         );
 
-        if (found)
+        if (found && NavMesh.SamplePosition(randomPos, out NavMeshHit hit, 2.0f, NavMesh.AllAreas))
         {
-            if (isFloorTarget)
-            {
-                if (NavMesh.SamplePosition(randomPos, out NavMeshHit hit, 2.0f, NavMesh.AllAreas))
-                {
-                    agent.SetDestination(hit.position);
-                    yield return new WaitUntil(() => !agent.pathPending);
-                    while (agent.remainingDistance > agent.stoppingDistance)
-                    {
-                        yield return null;
-                    }
-                }
-            }
-            else
-            {
-                int roomLayerMask = LayerMask.GetMask("Default", "RoomMesh");
+            agent.SetDestination(hit.position);
+            yield return new WaitUntil(() => !agent.pathPending);
 
-                bool isBlocked = Physics.Raycast(randomPos + Vector3.up * 0.01f, Vector3.up, 0.6f, roomLayerMask);
-
-                if (!isBlocked)
-                {
-                    if (NavMesh.SamplePosition(randomPos, out NavMeshHit hit, 0.15f, NavMesh.AllAreas))
-                    {
-                        Debug.Log("<color=yellow>[Cat] Jumping up to furniture!</color>");
-                        agent.Warp(hit.position);
-                        yield return new WaitForSeconds(1.0f);
-                    }
-                }
+            while (agent.remainingDistance > agent.stoppingDistance)
+            {
+                yield return null;
             }
         }
     }
@@ -131,6 +105,18 @@ public class Wander : MonoBehaviour
             catAudio.PlayOneShot(meowClip);
             nextMeowTime = Time.time + Random.Range(minMeowInterval, maxMeowInterval);
         }
+    }
+
+    private IEnumerator ResumeWanderAfterArrival()
+    {
+        yield return new WaitUntil(() => !agent.pathPending);
+        while (agent.remainingDistance > agent.stoppingDistance)
+        {
+            yield return null;
+        }
+        PlayRandomMeow();
+        yield return new WaitForSeconds(2.0f);
+        StartCoroutine(InitializeAndLoop());
     }
 
     public void StartPetting()
@@ -166,7 +152,7 @@ public class Wander : MonoBehaviour
         }
 
         Debug.Log("<color=magenta>[Cat] Interaction Ended.</color>");
-        isBeingPetted = true;
+        isBeingPetted = false;
 
         agent.isStopped = false;
 
@@ -182,6 +168,28 @@ public class Wander : MonoBehaviour
             {
                 catAudio.PlayOneShot(meowClip);
             }
+        }
+    }
+
+    public void ComeToUser()
+    {
+        if (agent == null || !agent.isActiveAndEnabled)
+        {
+            return;
+        }
+
+        StopAllCoroutines();
+
+        Vector3 playerPos = Camera.main.transform.position;
+
+        // We want the floor position below the player
+        if (NavMesh.SamplePosition(playerPos, out NavMeshHit hit, 3.0f, NavMesh.AllAreas))
+        {
+            agent.isStopped = false;
+            agent.SetDestination(hit.position);
+            Debug.Log("<color=green>[Cat] Coming to player!</color>");
+
+            StartCoroutine(ResumeWanderAfterArrival());
         }
     }
 }

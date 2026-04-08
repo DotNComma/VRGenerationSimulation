@@ -54,4 +54,18 @@ public class DetectionWorldBridge : MonoBehaviour
             Debug.LogError($"[Bridge] CRASH: {e.Message} \n {e.StackTrace}");
         }
     }
+
+    public void ResetCat()
+    {
+        // Find the cat in the scene and destroy it
+        Wander existingCat = FindFirstObjectByType<Wander>();
+        if (existingCat != null)
+        {
+            Destroy(existingCat.gameObject);
+        }
+
+        // Allow the bridge to spawn a new one next time it detects the bottle
+        hasSpawned = false;
+        Debug.Log("<color=red>[Bridge] Cat Reset. Ready for new detection.</color>");
+    }
 }
